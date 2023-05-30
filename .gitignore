@@ -1,0 +1,8 @@
+node_modules
+.wwebjs_auth
+__pycache__
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.mp4

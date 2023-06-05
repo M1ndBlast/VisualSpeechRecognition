@@ -8,46 +8,66 @@ from mediapipe import solutions
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe.framework.formats import landmark_pb2
+from operator import itemgetter
 # from google.colab.patches import cv2_imshow
 
+mouthOuter = [
+		164, 167, 98, 165, 203, 206, 92, 216, 186, 57, 212, 43, 202, 
+		106, 204, 182, 194, 83, 201, 18, 200, 313, 421, 406, 418, 335, 
+		424, 273, 422, 287, 432, 410, 436, 322, 426, 423, 391, 327, 393,
+]
 
 def draw_landmarks_on_image(rgb_image, detection_result):
-  face_landmarks_list = detection_result.face_landmarks
-  annotated_image = np.copy(rgb_image)
+	face_landmarks_list = detection_result.face_landmarks
+	annotated_image = np.copy(rgb_image)
+	cp_image = np.copy(rgb_image)
+
 
   # Loop through the detected faces to visualize.
-  for idx in range(len(face_landmarks_list)):
-    face_landmarks = face_landmarks_list[idx]
+	for idx in range(len(face_landmarks_list)):
+		face_landmarks = face_landmarks_list[idx]
 
-    # Draw the face landmarks.
-    face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-    face_landmarks_proto.landmark.extend([
-      landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks
-    ])
+		points = itemgetter(*mouthOuter)(face_landmarks)
+		# get the min and max x and y values
+		x_min = min(points, key=lambda x: x.x).x
+		x_max = max(points, key=lambda x: x.x).x
+		y_min = min(points, key=lambda x: x.y).y
+		y_max = max(points, key=lambda x: x.y).y
+		# crop the image
+		cp_image = cp_image[int(y_min * cp_image.shape[0]):int(y_max * cp_image.shape[0]), int(x_min * cp_image.shape[1]):int(x_max * cp_image.shape[1])]
+		# resize the image
+		#   cp_image = cv2.resize(cp_image, (256, 256))
+		# show the image
+		# cv2_imshow(cv2.cvtColor(cp_image, cv2.COLOR_RGB2BGR))
 
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=mp.solutions.face_mesh.FACEMESH_TESSELATION,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=mp.solutions.drawing_styles
-        .get_default_face_mesh_tesselation_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=mp.solutions.face_mesh.FACEMESH_CONTOURS,
-        landmark_drawing_spec=None,
-        connection_drawing_spec=mp.solutions.drawing_styles
-        .get_default_face_mesh_contours_style())
-    solutions.drawing_utils.draw_landmarks(
-        image=annotated_image,
-        landmark_list=face_landmarks_proto,
-        connections=mp.solutions.face_mesh.FACEMESH_IRISES,
-          landmark_drawing_spec=None,
-          connection_drawing_spec=mp.solutions.drawing_styles
-          .get_default_face_mesh_iris_connections_style())
+		# Draw the face landmarks.
+		face_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+		face_landmarks_proto.landmark.extend([
+			landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in face_landmarks
+		])
 
-  return annotated_image
+		face_landmarks_mouth = landmark_pb2.NormalizedLandmarkList()
+		face_landmarks_mouth.landmark.extend([
+			landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in itemgetter(*mouthOuter)(face_landmarks)
+		])
+
+		solutions.drawing_utils.draw_landmarks(
+			image=annotated_image,
+			landmark_list=face_landmarks_proto,
+			connections=mp.solutions.face_mesh.FACEMESH_TESSELATION,
+			landmark_drawing_spec=None,
+			connection_drawing_spec=mp.solutions.drawing_utils.
+				DrawingSpec(thickness=1, circle_radius=0, color=(247, 197, 54)))
+
+		for point in itemgetter(*mouthOuter)(face_landmarks):
+			cv2.circle(annotated_image, (int(point.x * annotated_image.shape[1]), int(point.y * annotated_image.shape[0])), 2, (79, 225, 212), -1)
+		# solutions.drawing_utils.draw_landmarks(
+		# 	image=annotated_image,
+		# 	landmark_list=face_landmarks_mouth,
+		# 	landmark_drawing_spec=mp.solutions.drawing_utils.
+		# 		DrawingSpec(thickness=1, circle_radius=1, color=(79, 225, 212),))
+		
+	return annotated_image, cp_image
 
 def plot_face_blendshapes_bar_graph(face_blendshapes):
   # Extract the face blendshapes category names and scores.
@@ -92,8 +112,14 @@ def landmark_image(filename):
 	# STEP 4: Detect face landmarks from the input image.
 	detection_result = detector.detect(image)
 
+	print(detection_result)
+	# Check if the detection result is valid.
+	if detection_result.face_landmarks == []:
+		print('No face is detected.')
+		raise Exception('Ningún rostro no detectado')
+
 	# STEP 5: Process the detection result. In this case, visualize it.
-	annotated_image = draw_landmarks_on_image(image.numpy_view(), detection_result)
+	annotated_image, croped_image = draw_landmarks_on_image(image.numpy_view(), detection_result)
 
 	plot_face_blendshapes_bar_graph(detection_result.face_blendshapes[0])
 
@@ -103,6 +129,7 @@ def landmark_image(filename):
         
 	# save image
 	cv2.imwrite('landmark.jpg', cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
+	cv2.imwrite('croped.jpg', cv2.cvtColor(croped_image, cv2.COLOR_RGB2BGR))
     
 
 

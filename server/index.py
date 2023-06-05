@@ -63,13 +63,20 @@ async def media(sid, req): # req = { mimetype: 'image/png', data: 'base64 encode
 		with open(filename, 'wb') as f:
 			f.write(base64.b64decode(data))
 
-		# Detectar rostros
-		face_landmarker.landmark_image(filename)
+		try:
+			# Detectar rostros
+			face_landmarker.landmark_image(filename)
 
-		# Enviar rostros detectados
-		with open('landmark.jpg', 'rb') as f:
-			# await sio.emit('image', base64.b64encode(f.read()).decode('ascii'))
-			await sio.emit('image', base64.b64encode(f.read()).decode('utf-8'))
+			# Enviar rostros detectados
+			with open('landmark.jpg', 'rb') as f:
+				# await sio.emit('image', base64.b64encode(f.read()).decode('ascii'))
+				await sio.emit('image', base64.b64encode(f.read()).decode('utf-8'))
+			with open('croped.jpg', 'rb') as f:
+				# await sio.emit('image', base64.b64encode(f.read()).decode('ascii'))
+				await sio.emit('image', base64.b64encode(f.read()).decode('utf-8'))
+		except Exception as e:
+			print(e)
+			await sio.emit('text', 'No se detectaron rostros')
 		return
 
 	elif mimetype.startswith('video/'):

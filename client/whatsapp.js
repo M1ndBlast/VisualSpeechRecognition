@@ -4,6 +4,7 @@
 
 import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import Whatsapp from 'whatsapp-web.js'
 const { Client, LocalAuth, MessageTypes, MessageMedia } = Whatsapp
 
@@ -25,6 +26,7 @@ class WhatsappClient {
 		});
 		this.client.on("ready", () => {
 			console.log("Conectado");
+			this.client.sendMessage("5215610338516@c.us", "Conectado 👌");
 		});
 		this.client.on("message", async (msg) => {
 			if (!this.socket.active) {
@@ -45,13 +47,14 @@ class WhatsappClient {
 				}
 				case MessageTypes.VIDEO: {
 					let media = await msg.downloadMedia();
+					console.log(msg.from);
 					if (!media) {
 						console.error("Error downloading media");
 						await msg.reply("Error al descargar el video");
 						return;
 					}
 					console.log("Media received: ", media.mimetype, media.data.substring(0, 100));
-            		await this.sendVideoInChunks(media.data).catch(async err => {
+            		await this.sendVideoInChunks(media.data, media.mimetype).catch(async err => {
 						console.error("Error sending video", err);
 						await msg.reply("Error al enviar el video al servidor");
 					});
@@ -67,7 +70,9 @@ class WhatsappClient {
 	
 	async sendVideoInChunks(data, mimetype) {
 		const CHUNK_SIZE = 512 * 1024; // 512KB = 0.5MB
-		const id = uuidv4();
+		// const id = uuidv4().replace(/-/g, "").substring(0, 16);
+		const id = crypto.createHash('md5').update(data).digest('hex').substring(0, 16);
+
 
 
 		let chunkIndex = 0;

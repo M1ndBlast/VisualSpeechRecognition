@@ -2,12 +2,14 @@
 # Autor: Peduzzi Acevedo Gustavo Alain
 # Fecha: 2023-05-25
 
-from aiohttp import web
-import base64
-import socketio
-import openai
-import face_landmarker
+import os
 import time
+import base64
+import openai
+import socketio
+import face_landmarker
+from aiohttp import web
+
 openai.api_key = "sk-nX..."
 
 sio = socketio.AsyncServer()
@@ -133,7 +135,7 @@ async def handle_video_chunk(sid, data_uuid, chunk_index, chunk):
 		print(f"Todos los fragmentos recibidos, procesando video {data_uuid}")
 		video_chunks = data_transactions[data_uuid]['chunks']
 		video_completo = ''.join([video_chunks[i] for i in sorted(video_chunks.keys())])
-		procesar_video(video_completo)
+		procesar_video(video_completo, f"video_{data_uuid}.{data_transactions[data_uuid]['mimetype'].split('/')[1]}")
 		del data_transactions[data_uuid]
 		await sio.emit('text', "Video recibido y procesado :D")
 
@@ -155,12 +157,16 @@ def got_all_chunks(chunks, total_buffer):
 
 	return True
 
-def procesar_video(video_base64):
+def procesar_video(video_base64, filename="video_recibido.mp4"):
 	# Convertir el video de Base64 a bytes
 	video_bytes = base64.b64decode(video_base64)
 
+	# crear carpeta 
+	if not os.path.exists("media_set/"):
+		os.mkdir("media_set/")
+
 	# Guardar el video en un archivo
-	with open("video_recibido.mp4", "wb") as video_file:
+	with open("media_set/" + filename, "wb") as video_file:
 		video_file.write(video_bytes)
 
 	# Aquí puedes agregar lógica adicional para procesar el video
@@ -168,8 +174,6 @@ def procesar_video(video_base64):
 
 	print("Video procesado y guardado como 'video_recibido.mp4'")
 
-
-	
 
 if __name__ == '__main__':
 	try:

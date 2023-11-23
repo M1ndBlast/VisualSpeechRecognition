@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from mediapipe import solutions
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from mediapipe.framework.formats import landmark_pb2
 from operator import itemgetter
+from mediapipe.framework.formats import landmark_pb2
 # from google.colab.patches import cv2_imshow
 
 mouthOuter = [

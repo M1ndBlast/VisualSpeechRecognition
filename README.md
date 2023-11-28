@@ -77,6 +77,20 @@ sudo apt-get install libgl1-mesa-glx -y
 
 Después de instalar esta biblioteca, intenta nuevamente iniciar el servidor.
 
+#### Error al enviar un archivo multimedia: Modificar Message.js
+
+Si al intentar enviar un archivo multimedia encuentras un error similar a:
+
+```
+let media = await msg.downloadMedia();
+data_base64.data = media.data
+TypeError: Cannot read properties of undefined (reading 'data')
+```
+
+Esto se debe a un error en el codigo fuente de whatsapp-web.js. Para resolver este problema, elimina la el tramo de código `|| msg.mediaData.mediaStage === 'FETCHING'` del archivo `node_modules/whatsapp-web.js/src/structures/Message.js` en la línea ~445:
+
+Después de remover la linea, intenta nuevamente iniciar el servidor.
+
 ## Contribución
 Las contribuciones al proyecto son bienvenidas. Por favor, revise las [pautas de contribución](https://github.com/M1ndBlast/VisualSpeechRecognition#contributing) y abra un 'issue' o 'pull request' en GitHub.
 

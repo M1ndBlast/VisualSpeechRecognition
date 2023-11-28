@@ -9,6 +9,9 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from operator import itemgetter
 from mediapipe.framework.formats import landmark_pb2
+
+import torch
+from pipelines.pipeline import InferencePipeline
 # from google.colab.patches import cv2_imshow
 
 mouthOuter = [
@@ -131,6 +134,18 @@ def landmark_image(filename):
 	cv2.imwrite('landmark.jpg', cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
 	cv2.imwrite('croped.jpg', cv2.cvtColor(croped_image, cv2.COLOR_RGB2BGR))
     
+
+def infer(
+		gpu_idx= None,
+		detector= 'mediapipe',
+		data_filename= './terror.mp4', 
+		config_filename= './configs/CMUMOSEAS_V_ES_WER44.5.ini', 
+		landmarks_filename= None, 
+	):
+	device = torch.device(f"cuda:{gpu_idx}" if torch.cuda.is_available() and gpu_idx >= 0 else "cpu")
+	output = InferencePipeline(config_filename, device=device, detector=detector, face_track=True)(data_filename, landmarks_filename)
+	print(f"hyp: {output}")
+	return output
 
 
 if __name__ == '__main__':

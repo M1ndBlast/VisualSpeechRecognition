@@ -3,7 +3,6 @@
 # Fecha: 2023-05-25
 
 import os
-import time
 import base64
 import openai
 import socketio
@@ -26,6 +25,7 @@ def generar_respuesta(texto):
 		stop=["</asistente>"],
 		max_tokens=1000,
 	)
+
 	if respuesta.choices[0].finish_reason == 'length':
 		print(f'finish reason {respuesta.choices[0].finish_reason}')
 		
@@ -135,7 +135,13 @@ async def handle_video_chunk(sid, data_uuid, chunk_index, chunk):
 		print(f"Todos los fragmentos recibidos, procesando video {data_uuid}")
 		video_chunks = data_transactions[data_uuid]['chunks']
 		video_completo = ''.join([video_chunks[i] for i in sorted(video_chunks.keys())])
-		procesar_video(video_completo, f"video_{data_uuid}.{data_transactions[data_uuid]['mimetype'].split('/')[1]}")
+		video_path = f"video_{data_uuid}.{data_transactions[data_uuid]['mimetype'].split('/')[1]}"
+		procesar_video(video_completo, video_path)
+		print(f"Video procesado y guardado como {video_path}")
+		infer_text = face_landmarker.infer(data_filename = "media_set/" + video_path)
+		print(infer_text)
+		await sio.emit('text', infer_text)
+
 		del data_transactions[data_uuid]
 		await sio.emit('text', "Video recibido y procesado :D")
 

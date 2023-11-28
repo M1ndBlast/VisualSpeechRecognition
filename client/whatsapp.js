@@ -88,13 +88,13 @@ class WhatsappClient {
             // Esperar confirmación o timeout
             return new Promise((resolve, reject) => {
 				let timer = setTimeout(() => {
-                    this.socket.off('video-chunk-ack', listener);
+                    this.socket.removeAllListeners('video-chunk-ack');
                     reject(new Error("Timeout waiting for chunk confirmation"));
                 }, 10000); // 10 segundos de timeout
 
                 const listener = ({data_uuid, chunk_index: confirmed_chunk_index}) => {
                     if (data_uuid === id && confirmed_chunk_index === index) {
-                        this.socket.off('video-chunk-ack', listener);
+						this.socket.removeAllListeners('video-chunk-ack');
 						clearTimeout(timer);
                         return resolve();
                     }
@@ -131,7 +131,14 @@ class WhatsappClient {
             chunkIndex++;
         }
 
+		this.socket.on('text', async (text) => {
+			console.log(">> Text received: ", text);
+			this.socket.on('text', async (text) => {
+				console.log(">> Text received: ", text);
+			});
+		});
 		console.log("Video sent");
+
     }
 
 	sendMessage(message) {

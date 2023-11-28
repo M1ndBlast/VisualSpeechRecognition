@@ -1,5 +1,6 @@
 # ##### Copyright 2023 The MediaPipe Authors. All Rights Reserved.
 import cv2
+import torch
 import numpy as np
 import mediapipe as mp
 import matplotlib.pyplot as plt
@@ -9,8 +10,6 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from operator import itemgetter
 from mediapipe.framework.formats import landmark_pb2
-
-import torch
 from pipelines.pipeline import InferencePipeline
 # from google.colab.patches import cv2_imshow
 
@@ -138,8 +137,8 @@ def landmark_image(filename):
 def infer(
 		gpu_idx= None,
 		detector= 'mediapipe',
-		data_filename= './terror.mp4', 
-		config_filename= './configs/CMUMOSEAS_V_ES_WER44.5.ini', 
+		data_filename= './ali.mp4', 
+		config_filename= '/workspaces/VisualSpeechRecognition/server/vsr/configs/CMUMOSEAS_V_ES_WER44.5.ini', 
 		landmarks_filename= None, 
 	):
 	device = torch.device(f"cuda:{gpu_idx}" if torch.cuda.is_available() and gpu_idx >= 0 else "cpu")
@@ -149,4 +148,4 @@ def infer(
 
 
 if __name__ == '__main__':
-	landmark_image('sample-2f.jpg')
+	infer(data_filename= './ali.mp4', config_filename= './vsr/configs/CMUMOSEAS_V_ES_WER44.5.ini')

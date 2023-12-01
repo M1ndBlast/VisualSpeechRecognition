@@ -39,12 +39,12 @@ def text(sid, data):
     print('Mensaje recibido:', data)
     sio.emit('text', data, to=sid)
 
-@sio.on('video-start')
+@sio.on('data-start')
 def handle_data_start(sid, id, mimetype, total_buffer):
 	print(f"Recibiendo video {id} de tipo {mimetype} en fragmentos de {total_buffer} bytes")
 	data_transactions[id] = { 'mimetype': mimetype, 'total_buffer': total_buffer, 'chunks': {} }
 
-@sio.on('video-chunk')
+@sio.on('data-chunk')
 def handle_data_chunk(sid, data_uuid, chunk_index, chunk):
 
 	if data_uuid not in data_transactions:
@@ -55,7 +55,7 @@ def handle_data_chunk(sid, data_uuid, chunk_index, chunk):
 	data_transactions[data_uuid]['chunks'][chunk_index] = chunk
 
 	# Enviar un ACK al cliente para indicar que el fragmento ha sido recibido
-	sio.emit('video-chunk-ack', { 'data_uuid': data_uuid, 'chunk_index': chunk_index})
+	sio.emit('data-chunk-ack', { 'data_uuid': data_uuid, 'chunk_index': chunk_index})
 
 	data = data_transactions[data_uuid]
 	print(f"{sum([len(data['chunks'][i]) for i in data['chunks'].keys()])}/{data['total_buffer']}")

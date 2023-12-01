@@ -79,7 +79,7 @@ class WhatsappClient {
 		return new Promise(async (resolve, reject) => {
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
 			
-			this.socket.emit("video-start", uuid, mimetype, data_base64.length);
+			this.socket.emit("data-start", uuid, mimetype, data_base64.length);
 	
 			const sendChunk = async (chunk_index) => {
 			    const start = chunk_index * CHUNK_SIZE,
@@ -92,19 +92,19 @@ class WhatsappClient {
 	
 			        const listener = ({data_uuid, chunk_index: confirmed_chunk_index}) => {
 			            if (data_uuid === uuid && confirmed_chunk_index === expected_chunk_index) {
-							this.socket.off('video-chunk-ack', listener);
+							this.socket.off('data-chunk-ack', listener);
 							clearTimeout(timer);
 			                return resolve();
 			            }
 			        };
 
 					timer = setTimeout(() => {
-						this.socket.off('video-chunk-ack', listener);
+						this.socket.off('data-chunk-ack', listener);
 			            reject(new Error("Timeout waiting for chunk confirmation"));
 			        }, 10*1000); // 10 segundos de timeout
 					
-					this.socket.on('video-chunk-ack', listener);
-					this.socket.emit('video-chunk', uuid, chunk_index, chunk);
+					this.socket.on('data-chunk-ack', listener);
+					this.socket.emit('data-chunk', uuid, chunk_index, chunk);
 	
 					
 			    });
@@ -136,12 +136,7 @@ class WhatsappClient {
 
 			    current_chunk_index++;
 			}
-			// listener = ({data_uuid}) => {
-			// 	if (data_uuid === uuid) {
-			// 		this.socket.off('data-end-ack', listener);
-			// 	}
-			// };
-			// this.socket.on('data-end-ack', listener);
+			
 			this.socket.emit('data-end', uuid);
 			console.log("All data sent");
 			return resolve(true);

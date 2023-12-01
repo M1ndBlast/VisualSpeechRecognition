@@ -7,12 +7,13 @@ sys.path.append('/workspaces/VisualSpeechRecognition/server/vsr')
 sys.path.append('/workspaces/VisualSpeechRecognition/server') 
 
 import os
+import time
 import base64
 import openai
 import socketio
 import face_landmarker
 
-sio = socketio.Server()
+sio = socketio.Server(always_connect=True, cors_allowed_origins='*', maxHttpBufferSize=1e8)
 app = socketio.WSGIApp(sio)
 
 DATA_DIR = 'media_set'
@@ -58,24 +59,33 @@ def handle_data_chunk(sid, data_uuid, chunk_index, chunk):
 
 	data = data_transactions[data_uuid]
 	print(f"{sum([len(data['chunks'][i]) for i in data['chunks'].keys()])}/{data['total_buffer']}")
-	sio.emit('text', f"{sum([len(data['chunks'][i]) for i in data['chunks'].keys()])}/{data['total_buffer']}")
+	# sio.emit('text', f"{sum([len(data['chunks'][i]) for i in data['chunks'].keys()])}/{data['total_buffer']}")
 
 
 	# Si todos los fragmentos han llegado, reconstruir y procesar el video
 	if got_all_chunks(data_transactions[data_uuid]['chunks'], data_transactions[data_uuid]['total_buffer']):
-		print(f"Todos los fragmentos recibidos, procesando video {data_uuid}")
-		video_chunks = data_transactions[data_uuid]['chunks']
-		video_completo = ''.join([video_chunks[i] for i in sorted(video_chunks.keys())])
-		video_path = f"video_{data_uuid}.{data_transactions[data_uuid]['mimetype'].split('/')[1]}"
-		save_data(video_completo, video_path)
-		print(f"Video procesado y guardado como {video_path}")
-		sio.emit('text', "Video recibido, procesando...")
-		infer_text = face_landmarker.infer(data_filename = "media_set/" + video_path)
-		print(f"Texto inferido: {infer_text}")
-		sio.emit('text', infer_text)
+		print(f"Todos los fragmentos recibidos, procesando: {data_uuid}")
+		# sio.emit('data-end-ack', data_uuid)
 
-		del data_transactions[data_uuid]
-		sio.emit('text', "Video recibido y procesado :D")
+@sio.on('data-end')
+def handle_data_end(sid, data_uuid):
+	print(f"Fin de la transacción: {data_uuid}")
+
+	video_chunks = data_transactions[data_uuid]['chunks']
+	data_base64 = ''.join([video_chunks[i] for i in sorted(video_chunks.keys())])
+	try:
+		transaction = data_transactions[data_uuid]
+		if transaction['mimetype'] == 'video/mp4':
+			process_video(data_uuid, data_base64)
+
+		elif transaction['mimetype'] == 'text/plain':
+			process_text(data_uuid, data_base64)
+			
+	except:
+		print("Error en el procesamiento")
+		sio.emit('text', "Error en el procesamiento")
+
+	del data_transactions[data_uuid]
 
 def got_all_chunks(chunks, total_buffer):
 	if len(chunks) == 0:
@@ -93,6 +103,27 @@ def save_data(video_base64, filename):
 	with open(os.path.join(DATA_DIR, filename), 'wb') as video_file:
 		video_file.write(video_bytes)
 	return os.path.join(DATA_DIR, filename)
+
+def process_video(data_uuid, data_base64):
+	video_path = f"video_{data_uuid}.{data_transactions[data_uuid]['mimetype'].split('/')[1]}"
+	save_data(data_base64, video_path)
+
+	# temporizador de 10 segundos para simular el procesamiento
+	time.sleep(2)
+
+	infer_text = face_landmarker.infer(data_filename = "media_set/" + video_path)
+	infer_text = "[TEST] video"
+	print(f"Texto inferido: {infer_text}")
+	sio.emit('text', infer_text)
+	
+
+def process_text(data_uuid, data_base64):
+	texto = base64.b64decode(data_base64).decode('utf-8')
+	# respuesta = generar_respuesta(data_base64)
+	respuesta = "[TEST] texto"
+	print(f"Texto recibido: {texto}")
+	print(f"Respuesta generada: {respuesta}")
+	sio.emit('text', respuesta)
 
 def generar_respuesta(texto):
 	# Generar respuesta utilizando Whisper

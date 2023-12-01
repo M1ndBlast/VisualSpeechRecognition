@@ -65,11 +65,9 @@ class WhatsappClient {
 					return;
 			}
 
-			console.log("Message received: ", data_base64.mimetype);
 
-			await this.sendDataByChunks(data_base64.data, data_base64.mimetype).then(async () => {
-				await msg.reply("Media recibido");
-			}).catch(async err => {
+			await this.sendDataByChunks(data_base64.data, data_base64.mimetype)
+			.catch(async err => {
 				console.error("Error sending video", err);
 				await msg.reply("Error al enviar el video al servidor");
 			});
@@ -80,7 +78,6 @@ class WhatsappClient {
 	async sendDataByChunks(data_base64, mimetype, CHUNK_SIZE = 512 * 1024) {
 		return new Promise(async (resolve, reject) => {
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
-			let chunkIndex = 0;
 			
 			this.socket.emit("video-start", uuid, mimetype, data_base64.length);
 	
@@ -102,11 +99,11 @@ class WhatsappClient {
 			        };
 
 					timer = setTimeout(() => {
-			            this.socket.off('video-chunk-ack', listener);
+						this.socket.off('video-chunk-ack', listener);
 			            reject(new Error("Timeout waiting for chunk confirmation"));
 			        }, 10*1000); // 10 segundos de timeout
-	
-			        this.socket.on('video-chunk-ack', listener);
+					
+					this.socket.on('video-chunk-ack', listener);
 					this.socket.emit('video-chunk', uuid, chunk_index, chunk);
 	
 					
@@ -124,31 +121,30 @@ class WhatsappClient {
 			    while (!success && attempts < 3) {
 			        try {
 						console.log(`Sending chunk ${i / CHUNK_SIZE + 1} of ${Math.ceil(data_base64.length / CHUNK_SIZE)} tries ${attempts + 1}/3`);
-			            // await sendChunk(chunkIndex);
+			            await sendChunk(current_chunk_index);
 			            success = true;
 			        } catch (error) {
-			            console.error(`Error sending chunk ${chunkIndex}:`, error);
+			            console.error(`Error sending chunk ${current_chunk_index+1}:`, error.message);
 			            attempts++;
 			        }
 			    }
 	
 			    if (!success) {
-			        console.error(`Failed to send chunk ${chunkIndex} after 3 attempts`);
-					return Promise.reject("Failed to send chunk");
-			        break; // Detener el envío de más fragmentos
+			        console.error(`Failed to send chunk ${current_chunk_index} after 3 attempts`);
+					return reject("Failed to send chunk");
 			    }
-	
-			    chunkIndex++;
+
+			    current_chunk_index++;
 			}
-	
-			// this.socket.on('text', async (text) => {
-			// 	console.log(">> Text received: ", text);
-			// 	this.socket.on('text', async (text) => {
-			// 		console.log(">> Text received: ", text);
-			// 	});
-			// });
-			console.log("Video dONE");
-			resolve(true);
+			// listener = ({data_uuid}) => {
+			// 	if (data_uuid === uuid) {
+			// 		this.socket.off('data-end-ack', listener);
+			// 	}
+			// };
+			// this.socket.on('data-end-ack', listener);
+			this.socket.emit('data-end', uuid);
+			console.log("All data sent");
+			return resolve(true);
 		});
 
     }
@@ -167,10 +163,7 @@ class WhatsappClient {
 				console.error(err);
 				return;
 			}
-			console.log("File saved");
-			// let messageMedia = new MessageMedia("video/mp4", video, "foo" + ".mp4");
 			let messageMedia = MessageMedia.fromFilePath(filename);
-			console.log("foo");
 			await this.client.sendMessage("5215610338516@c.us", messageMedia, {
 				caption: "Video recibido",
 			});

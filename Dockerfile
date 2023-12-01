@@ -20,7 +20,7 @@ RUN npm install
 	# pip install -r requirements.txt
 	# Download repo
 RUN	git clone https://github.com/mpc001/Visual_Speech_Recognition_for_Multiple_Languages.git server/vsr &&\
-RUN pip install torch torchvision torchaudio \
+	pip install torch torchvision torchaudio \
 				opencv-python \
 				scipy \
 				scikit-image \

@@ -15,13 +15,9 @@ import face_landmarker
 sio = socketio.Server()
 app = socketio.WSGIApp(sio)
 
+DATA_DIR = 'media_set'
 clients = []
 data_transactions = {}
-
-
-@sio.on('*')
-def catch_all(event, sid, data):
-	print(f'catch_all  \t{event}\t{sid}\t{data}')
 
 @sio.event
 def connect(sid, environ):
@@ -33,11 +29,13 @@ def disconnect(sid):
 	clients.remove(sid)
 	print(f"disconnect\t[{len(clients)}]\t{sid}")
 
-# Manejador para el evento 'text'
+@sio.on('*')
+def catch_all(event, sid, data):
+	print(f'catch_all  \t{event}\t{sid}\t{data}')
+
 @sio.event
 def text(sid, data):
     print('Mensaje recibido:', data)
-    # Envía el mismo mensaje de vuelta al cliente
     sio.emit('text', data, to=sid)
 
 @sio.on('video-start')
@@ -47,7 +45,6 @@ def handle_data_start(sid, id, mimetype, total_buffer):
 
 @sio.on('video-chunk')
 def handle_data_chunk(sid, data_uuid, chunk_index, chunk):
-	print(f"Recibido fragmento {chunk_index} de {len(chunk)} bytes")
 
 	if data_uuid not in data_transactions:
 		print("Error: no se ha recibido el fragmento de inicio")
@@ -58,7 +55,10 @@ def handle_data_chunk(sid, data_uuid, chunk_index, chunk):
 
 	# Enviar un ACK al cliente para indicar que el fragmento ha sido recibido
 	sio.emit('video-chunk-ack', { 'data_uuid': data_uuid, 'chunk_index': chunk_index})
-	sio.emit('text', f"Recibido fragmento {chunk_index} de {len(chunk)} bytes")
+
+	data = data_transactions[data_uuid]
+	print(f"{sum([len(data['chunks'][i]) for i in data['chunks'].keys()])}/{data['total_buffer']}")
+	sio.emit('text', f"{sum([len(data['chunks'][i]) for i in data['chunks'].keys()])}/{data['total_buffer']}")
 
 
 	# Si todos los fragmentos han llegado, reconstruir y procesar el video
@@ -78,35 +78,21 @@ def handle_data_chunk(sid, data_uuid, chunk_index, chunk):
 		sio.emit('text', "Video recibido y procesado :D")
 
 def got_all_chunks(chunks, total_buffer):
-	"""
-	Verificar si todos los fragmentos ya han sido recibidos y concuerdan con el tamaño esperado (total_buffer)
-	"""
 	if len(chunks) == 0:
 		return False
-
-	# Verificar si todos los fragmentos han sido recibidos
-	if len(chunks) != max(chunks.keys()) + 1:
+	elif len(chunks) != max(chunks.keys()) + 1:
 		return False
-
-	# Verificar si la suma de los tamaños de los fragmentos concuerda con el tamaño esperado
-	# print(f"Suma de tamaños de fragmentos: {sum([len(chunks[i]) for i in chunks.keys()])} vs {total_buffer}")
-	if sum([len(chunks[i]) for i in chunks.keys()]) != total_buffer:
+	elif sum([len(chunks[i]) for i in chunks.keys()]) != total_buffer:
 		return False
-
 	return True
 
 def save_data(video_base64, filename):
-	# Convertir el video de Base64 a bytes
 	video_bytes = base64.b64decode(video_base64)
-
-	# crear carpeta 
-	if not os.path.exists("media_set/"):
-		os.mkdir("media_set/")
-
-	# Guardar el video en un archivo
-	with open("media_set/" + filename, "wb") as video_file:
+	if not os.path.exists(DATA_DIR):
+		os.mkdir(DATA_DIR)
+	with open(os.path.join(DATA_DIR, filename), 'wb') as video_file:
 		video_file.write(video_bytes)
-    
+	return os.path.join(DATA_DIR, filename)
 
 def generar_respuesta(texto):
 	# Generar respuesta utilizando Whisper

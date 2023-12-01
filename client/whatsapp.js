@@ -3,7 +3,6 @@
 // Fecha: 2023-05-25
 
 import fs from "fs";
-import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import Whatsapp from 'whatsapp-web.js'
 const { Client, LocalAuth, MessageTypes, MessageMedia } = Whatsapp
@@ -34,110 +33,123 @@ class WhatsappClient {
 				return;
 			}
 
+			const data_base64 = {
+				data: "",
+				mimetype: "",
+			};
+			
 			switch (msg.type) {
 				case MessageTypes.TEXT:
-					console.log("Message received: ", msg.body);
-					this.socket.emit("text", msg.body);
+					data_base64.data = Buffer.from(msg.body).toString("base64");
+					data_base64.mimetype = "text/plain";
 					break;
-				case MessageTypes.IMAGE: {
-					let media = await msg.downloadMedia();
-					console.log("Media received: ", media.mimetype, media.data.substring(0, 100));
-					this.socket.emit("media", { mimetype: media.mimetype, data: media.data});
-					break;
-				}
-				case MessageTypes.VIDEO: {
-					let media = await msg.downloadMedia();
-					console.log(msg.from);
-					if (!media) {
-						console.error("Error downloading media");
-						await msg.reply("Error al descargar el video");
+				case MessageTypes.IMAGE: 
+				case MessageTypes.VIDEO:
+					if (msg.hasMedia === false) {
+						console.error("Message has no media");
+						await msg.reply("Mensaje no tiene media");
 						return;
 					}
-					console.log("Media received: ", media.mimetype, media.data.substring(0, 100));
-            		await this.sendVideoInChunks(media.data, media.mimetype).catch(async err => {
-						console.error("Error sending video", err);
-						await msg.reply("Error al enviar el video al servidor");
-					});
+					let media = await msg.downloadMedia();
+					if (media === undefined) {
+						console.error("Media is undefined");
+						await msg.reply("Media es undefined");
+						return;
+					}
+					data_base64.data = media.data
+					data_base64.mimetype = media.mimetype;
 					break;
-				}
 				default:
 					console.warn("Message type not supported");
-					break;
+					await msg.reply("Mensaje no soportado");
+					return;
 			}
+
+			console.log("Message received: ", data_base64.mimetype);
+
+			await this.sendDataByChunks(data_base64.data, data_base64.mimetype).then(async () => {
+				await msg.reply("Media recibido");
+			}).catch(async err => {
+				console.error("Error sending video", err);
+				await msg.reply("Error al enviar el video al servidor");
+			});
 		});
 		this.client.initialize();
 	}
 	
-	async sendVideoInChunks(data, mimetype) {
-		const CHUNK_SIZE = 512 * 1024; // 512KB = 0.5MB
-		// const id = uuidv4().replace(/-/g, "").substring(0, 16);
-		const id = crypto.createHash('md5').update(data).digest('hex').substring(0, 16);
+	async sendDataByChunks(data_base64, mimetype, CHUNK_SIZE = 512 * 1024) {
+		return new Promise(async (resolve, reject) => {
+			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
+			let chunkIndex = 0;
+			
+			this.socket.emit("video-start", uuid, mimetype, data_base64.length);
+	
+			const sendChunk = async (chunk_index) => {
+			    const start = chunk_index * CHUNK_SIZE,
+					  end = Math.min(data_base64.length, start + CHUNK_SIZE),
+					  chunk = data_base64.substring(start, end);
+	
+			    // Esperar confirmación o timeout
+			    return new Promise((resolve, reject) => {
+					let timer, expected_chunk_index = chunk_index;
+	
+			        const listener = ({data_uuid, chunk_index: confirmed_chunk_index}) => {
+			            if (data_uuid === uuid && confirmed_chunk_index === expected_chunk_index) {
+							this.socket.off('video-chunk-ack', listener);
+							clearTimeout(timer);
+			                return resolve();
+			            }
+			        };
 
-
-
-		let chunkIndex = 0;
-
-		this.socket.emit("video-start", id, mimetype, data.length);
-
-
-		const sendChunk = async (index) => {
-            let start = index * CHUNK_SIZE;
-            let end = Math.min(data.length, start + CHUNK_SIZE);
-			let chunk = data.substring(start, end);
-
-            // Esperar confirmación o timeout
-            return new Promise((resolve, reject) => {
-				let timer = setTimeout(() => {
-                    this.socket.removeAllListeners('video-chunk-ack');
-                    reject(new Error("Timeout waiting for chunk confirmation"));
-                }, 10000); // 10 segundos de timeout
-
-                const listener = ({data_uuid, chunk_index: confirmed_chunk_index}) => {
-                    if (data_uuid === id && confirmed_chunk_index === index) {
-						this.socket.removeAllListeners('video-chunk-ack');
-						clearTimeout(timer);
-                        return resolve();
-                    }
-                };
-
-                this.socket.on('video-chunk-ack', listener);
-				this.socket.emit('video-chunk', id, index, chunk.toString('base64'));
-
-                
-            });
-        };
-
-		for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-            let success = false;
-            let attempts = 0;
-
-            while (!success && attempts < 3) {
-                try {
-					console.log(`Sending chunk ${i / CHUNK_SIZE + 1} of ${Math.ceil(data.length / CHUNK_SIZE)} tries ${attempts + 1}/3`);
-                    await sendChunk(chunkIndex);
-                    success = true;
-                } catch (error) {
-                    console.error(`Error sending chunk ${chunkIndex}:`, error);
-                    attempts++;
-                }
-            }
-
-            if (!success) {
-                console.error(`Failed to send chunk ${chunkIndex} after 3 attempts`);
-				return Promise.reject("Failed to send chunk");
-                break; // Detener el envío de más fragmentos
-            }
-
-            chunkIndex++;
-        }
-
-		this.socket.on('text', async (text) => {
-			console.log(">> Text received: ", text);
-			this.socket.on('text', async (text) => {
-				console.log(">> Text received: ", text);
-			});
+					timer = setTimeout(() => {
+			            this.socket.off('video-chunk-ack', listener);
+			            reject(new Error("Timeout waiting for chunk confirmation"));
+			        }, 10*1000); // 10 segundos de timeout
+	
+			        this.socket.on('video-chunk-ack', listener);
+					this.socket.emit('video-chunk', uuid, chunk_index, chunk);
+	
+					
+			    });
+			};
+	
+			for (let i = 0, current_chunk_index = 0; 
+				 i < data_base64.length; 
+				 i += CHUNK_SIZE
+			) {
+				console.log(`Sending chunk ${i / CHUNK_SIZE + 1} of ${Math.ceil(data_base64.length / CHUNK_SIZE)}`);
+			    let success = false;
+			    let attempts = 0;
+	
+			    while (!success && attempts < 3) {
+			        try {
+						console.log(`Sending chunk ${i / CHUNK_SIZE + 1} of ${Math.ceil(data_base64.length / CHUNK_SIZE)} tries ${attempts + 1}/3`);
+			            // await sendChunk(chunkIndex);
+			            success = true;
+			        } catch (error) {
+			            console.error(`Error sending chunk ${chunkIndex}:`, error);
+			            attempts++;
+			        }
+			    }
+	
+			    if (!success) {
+			        console.error(`Failed to send chunk ${chunkIndex} after 3 attempts`);
+					return Promise.reject("Failed to send chunk");
+			        break; // Detener el envío de más fragmentos
+			    }
+	
+			    chunkIndex++;
+			}
+	
+			// this.socket.on('text', async (text) => {
+			// 	console.log(">> Text received: ", text);
+			// 	this.socket.on('text', async (text) => {
+			// 		console.log(">> Text received: ", text);
+			// 	});
+			// });
+			console.log("Video dONE");
+			resolve(true);
 		});
-		console.log("Video sent");
 
     }
 

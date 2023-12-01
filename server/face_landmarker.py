@@ -138,7 +138,7 @@ def infer(
 		gpu_idx= None,
 		detector= 'mediapipe',
 		data_filename= './ali.mp4', 
-		config_filename= '/workspaces/VisualSpeechRecognition/server/vsr/configs/CMUMOSEAS_V_ES_WER44.5.ini', 
+		config_filename= 'server/vsr/configs/CMUMOSEAS_V_ES_WER44.5.ini', 
 		landmarks_filename= None, 
 	):
 	device = torch.device(f"cuda:{gpu_idx}" if torch.cuda.is_available() and gpu_idx >= 0 else "cpu")

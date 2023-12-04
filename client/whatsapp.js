@@ -71,13 +71,14 @@ class WhatsappClient {
 			await this.sendDataByChunks(msg.from, data_base64.data, data_base64.mimetype, msg.react)
 			.catch(async err => {
 				console.error("Error sending video", err);
+				await msg.react("❌");
 				await msg.reply("Error al enviar el video al servidor");
 			});
 		});
 		this.client.initialize();
 	}
 	
-	async sendDataByChunks(chatId, data_base64, mimetype, CHUNK_SIZE = 512 * 1024, msg_react = (emoji) => {}) {
+	async sendDataByChunks(chatId, data_base64, mimetype, msg_react = (emoji) => {}, CHUNK_SIZE = 512 * 1024,) {
 		return new Promise(async (resolve, reject) => {
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
 			

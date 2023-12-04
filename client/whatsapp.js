@@ -77,11 +77,12 @@ class WhatsappClient {
 		this.client.initialize();
 	}
 	
-	async sendDataByChunks(chatId, data_base64, mimetype, CHUNK_SIZE = 512 * 1024) {
+	async sendDataByChunks(chatId, data_base64, mimetype, CHUNK_SIZE = 512 * 1024, msg_react = (emoji) => {}) {
 		return new Promise(async (resolve, reject) => {
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
 			
 			this.socket.emit("data-start", chatId, uuid, mimetype, data_base64.length,);
+			msg_react("👀")
 	
 			const sendChunk = async (chunk_index) => {
 			    const start = chunk_index * CHUNK_SIZE,
@@ -141,6 +142,7 @@ class WhatsappClient {
 			
 			this.socket.emit('data-end', uuid);
 			console.log("All data sent");
+			msg_react("⏳");
 			return resolve(true);
 		});
 
@@ -148,6 +150,13 @@ class WhatsappClient {
 
 	sendMessage(message, to=defaultChatId) {
 		this.client.sendMessage(to, message)
+		this.client.getChatById(to).then(chat => {
+			chat.fetchMessages({fromMe: false, limit: 1}).then(messages => {
+				if (messages.length === 0) return;
+				let lastMessage = messages[0];
+				messages[0].react("✅");
+			})
+		});
 	}
 
 	sendVideo(video) {

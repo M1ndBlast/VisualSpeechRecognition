@@ -153,7 +153,6 @@ class WhatsappClient {
 		this.client.getChatById(to).then(chat => {
 			chat.fetchMessages({fromMe: false, limit: 1}).then(messages => {
 				if (messages.length === 0) return;
-				let lastMessage = messages[0];
 				messages[0].react("✅");
 			})
 		});

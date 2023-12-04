@@ -148,4 +148,4 @@ def infer(
 
 
 if __name__ == '__main__':
-	infer(data_filename= './ali.mp4', config_filename= './vsr/configs/CMUMOSEAS_V_ES_WER44.5.ini')
+	infer(data_filename= './ali.mp4')

@@ -68,7 +68,7 @@ class WhatsappClient {
 			}
 
 
-			await this.sendDataByChunks(msg.from, data_base64.data, data_base64.mimetype)
+			await this.sendDataByChunks(msg.from, data_base64.data, data_base64.mimetype, msg.react)
 			.catch(async err => {
 				console.error("Error sending video", err);
 				await msg.reply("Error al enviar el video al servidor");
@@ -151,9 +151,16 @@ class WhatsappClient {
 	sendMessage(message, to=defaultChatId) {
 		this.client.sendMessage(to, message)
 		this.client.getChatById(to).then(chat => {
-			chat.fetchMessages({fromMe: false, limit: 1}).then(messages => {
+			chat.fetchMessages({fromMe: false, limit: 5}).then(messages => {
 				if (messages.length === 0) return;
-				messages[0].react("✅");
+				messages.forEach(msg => {
+					if (msg.hasReaction) {
+						msg.getReactions().then(reactions => {
+							reactions.filter(reaction => reaction.emoji === "⏳" && reaction.hasReactionByMe)
+								.forEach(() => msg.react("✅"));
+						})
+					}
+				})
 			})
 		});
 	}

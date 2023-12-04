@@ -113,7 +113,6 @@ def process_video(data_uuid, data_base64):
 	time.sleep(2)
 
 	infer_text = face_landmarker.infer(data_filename = file_saved_path)
-	infer_text = "[TEST] video"
 	sio.emit('text', {'message': infer_text, 'chatId': data_transactions[data_uuid]['chatId']})
 	
 

@@ -81,7 +81,7 @@ class WhatsappClient {
 		return new Promise(async (resolve, reject) => {
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
 			
-			this.socket.emit("data-start", defaultChatId, uuid, mimetype, data_base64.length,);
+			this.socket.emit("data-start", chatId, uuid, mimetype, data_base64.length,);
 	
 			const sendChunk = async (chunk_index) => {
 			    const start = chunk_index * CHUNK_SIZE,

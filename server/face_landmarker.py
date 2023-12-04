@@ -141,7 +141,15 @@ def infer(
 		config_filename= 'server/vsr/configs/CMUMOSEAS_V_ES_WER44.5.ini', 
 		landmarks_filename= None, 
 	):
-	device = torch.device(f"cuda:{gpu_idx}" if torch.cuda.is_available() and gpu_idx >= 0 else "cpu")
+	# print gpu device available
+	if torch.cuda.is_available():
+		# print all devices
+		print(torch.cuda.device_count())
+		# print current device
+		print(torch.cuda.current_device())
+		# print
+		print(torch.cuda.get_device_name(torch.cuda.current_device()))
+	device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
 	output = InferencePipeline(config_filename, device=device, detector=detector, face_track=True)(data_filename, landmarks_filename)
 	print(f"hyp: {output}")
 	return output

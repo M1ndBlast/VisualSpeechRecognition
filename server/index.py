@@ -3,7 +3,6 @@
 
 import sys
 # caution: path[0] is reserved for script path (or '' in REPL)
-sys.path.append('/workspaces/VisualSpeechRecognition/server/vsr') 
 sys.path.append('/workspaces/VisualSpeechRecognition/server') 
 
 import os

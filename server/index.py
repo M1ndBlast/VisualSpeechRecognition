@@ -97,22 +97,22 @@ def got_all_chunks(chunks, total_buffer):
 
 def save_data(video_base64, filename):
 	video_bytes = base64.b64decode(video_base64)
+	file_path = os.path.join(DATA_DIR, filename)
 	if not os.path.exists(DATA_DIR):
 		os.mkdir(DATA_DIR)
-	with open(os.path.join(DATA_DIR, filename), 'wb') as video_file:
+	with open(file_path, 'wb') as video_file:
 		video_file.write(video_bytes)
-	return os.path.join(DATA_DIR, filename)
+	return file_path
 
 def process_video(data_uuid, data_base64):
 	video_path = f"video_{data_uuid}.{data_transactions[data_uuid]['mimetype'].split('/')[1]}"
-	save_data(data_base64, video_path)
+	file_saved_path = save_data(data_base64, video_path)
 
 	# temporizador de 10 segundos para simular el procesamiento
 	time.sleep(2)
 
-	infer_text = face_landmarker.infer(data_filename = "media_set/" + video_path)
+	infer_text = face_landmarker.infer(data_filename = file_saved_path)
 	infer_text = "[TEST] video"
-	print(f"Texto inferido: {infer_text}")
 	sio.emit('text', infer_text)
 	
 

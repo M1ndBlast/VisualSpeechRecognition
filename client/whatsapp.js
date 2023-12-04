@@ -10,6 +10,7 @@ const { Client, LocalAuth, MessageTypes, MessageMedia } = Whatsapp
 import qrcode from "qrcode-terminal";
 import Console from "./mConsole.js";
 const console = new Console("[whatsapp client]");
+const defaultChatId = "5215610338516@c.us";
 
 class WhatsappClient {
 	constructor(socket) {
@@ -26,7 +27,7 @@ class WhatsappClient {
 		});
 		this.client.on("ready", () => {
 			console.log("Conectado");
-			this.client.sendMessage("5215610338516@c.us", "Conectado 👌");
+			this.client.sendMessage(defaultChatId, "Conectado 👌");
 		});
 		this.client.on("message", async (msg) => {
 			if (!this.socket.active) {
@@ -67,7 +68,7 @@ class WhatsappClient {
 			}
 
 
-			await this.sendDataByChunks(data_base64.data, data_base64.mimetype)
+			await this.sendDataByChunks(msg.from, data_base64.data, data_base64.mimetype)
 			.catch(async err => {
 				console.error("Error sending video", err);
 				await msg.reply("Error al enviar el video al servidor");
@@ -76,11 +77,11 @@ class WhatsappClient {
 		this.client.initialize();
 	}
 	
-	async sendDataByChunks(data_base64, mimetype, CHUNK_SIZE = 512 * 1024) {
+	async sendDataByChunks(chatId, data_base64, mimetype, CHUNK_SIZE = 512 * 1024) {
 		return new Promise(async (resolve, reject) => {
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
 			
-			this.socket.emit("data-start", uuid, mimetype, data_base64.length);
+			this.socket.emit("data-start", defaultChatId, uuid, mimetype, data_base64.length,);
 	
 			const sendChunk = async (chunk_index) => {
 			    const start = chunk_index * CHUNK_SIZE,
@@ -145,8 +146,8 @@ class WhatsappClient {
 
     }
 
-	sendMessage(message) {
-		this.client.sendMessage("5215610338516@c.us", message)
+	sendMessage(message, to=defaultChatId) {
+		this.client.sendMessage(to, message)
 	}
 
 	sendVideo(video) {
@@ -160,7 +161,7 @@ class WhatsappClient {
 				return;
 			}
 			let messageMedia = MessageMedia.fromFilePath(filename);
-			await this.client.sendMessage("5215610338516@c.us", messageMedia, {
+			await this.client.sendMessage(defaultChatId, messageMedia, {
 				caption: "Video recibido",
 			});
 		});
@@ -170,7 +171,7 @@ class WhatsappClient {
 	// Recibe imagen en base64 y genera un MessageMedia para enviarlo al usuario
 	sendImage(image) { 
 		let messageMedia = /* await */ new MessageMedia("image/png", image, "foo" + ".png");
-		this.client.sendMessage("5215610338516@c.us", messageMedia, {
+		this.client.sendMessage(defaultChatId, messageMedia, {
 			caption: "Imagen recibida",
 		}).catch(err => console.error("ERROR cachadoooo", err));
 	}

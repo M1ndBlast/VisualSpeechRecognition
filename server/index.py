@@ -36,12 +36,12 @@ def catch_all(event, sid, data):
 @sio.event
 def text(sid, data):
     print('Mensaje recibido:', data)
-    sio.emit('text', data, to=sid)
+    sio.emit('text', data)
 
 @sio.on('data-start')
-def handle_data_start(sid, id, mimetype, total_buffer):
-	print(f"Recibiendo video {id} de tipo {mimetype} en fragmentos de {total_buffer} bytes")
-	data_transactions[id] = { 'mimetype': mimetype, 'total_buffer': total_buffer, 'chunks': {} }
+def handle_data_start(sid, chatId, uuid, mimetype, total_buffer):
+	print(f"Recibiendo video {uuid} de tipo {mimetype} en fragmentos de {total_buffer} bytes")
+	data_transactions[uuid] = { 'chatId': chatId, 'mimetype': mimetype, 'total_buffer': total_buffer, 'chunks': {} }
 
 @sio.on('data-chunk')
 def handle_data_chunk(sid, data_uuid, chunk_index, chunk):
@@ -82,7 +82,7 @@ def handle_data_end(sid, data_uuid):
 			
 	except:
 		print("Error en el procesamiento")
-		sio.emit('text', "Error en el procesamiento")
+		sio.emit('text', {'message': 'Error en el procesamiento', 'chatId': transaction['chatId']})
 
 	del data_transactions[data_uuid]
 
@@ -105,6 +105,7 @@ def save_data(video_base64, filename):
 	return file_path
 
 def process_video(data_uuid, data_base64):
+	
 	video_path = f"video_{data_uuid}.{data_transactions[data_uuid]['mimetype'].split('/')[1]}"
 	file_saved_path = save_data(data_base64, video_path)
 
@@ -113,7 +114,7 @@ def process_video(data_uuid, data_base64):
 
 	infer_text = face_landmarker.infer(data_filename = file_saved_path)
 	infer_text = "[TEST] video"
-	sio.emit('text', infer_text)
+	sio.emit('text', {'message': infer_text, 'chatId': data_transactions[data_uuid]['chatId']})
 	
 
 def process_text(data_uuid, data_base64):
@@ -122,7 +123,7 @@ def process_text(data_uuid, data_base64):
 	respuesta = "[TEST] texto"
 	print(f"Texto recibido: {texto}")
 	print(f"Respuesta generada: {respuesta}")
-	sio.emit('text', respuesta)
+	sio.emit('text', {'message': 'Error en el procesamiento', 'chatId': data_transactions[data_uuid]['chatId']})
 
 def generar_respuesta(texto):
 	# Generar respuesta utilizando Whisper

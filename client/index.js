@@ -25,9 +25,9 @@ socket.on("*", (event, ...args) => {
 	console.log("*", event, args);
 });
 
-socket.on("text", (message) => {
+socket.on("text", ({message, chatId}) => {
 	console.log("socket sent text");
-	whatsapp.sendMessage(message);
+	whatsapp.sendMessage(message, chatId);
 });
 
 socket.on("media", (res) => { // res = { mimetype, data }

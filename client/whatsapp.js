@@ -68,7 +68,7 @@ class WhatsappClient {
 			}
 
 
-			await this.sendDataByChunks(msg.from, data_base64.data, data_base64.mimetype, msg.react)
+			await this.sendDataByChunks(msg, data_base64.data, data_base64.mimetype)
 			.catch(async err => {
 				console.error("Error sending video", err);
 				await msg.react("❌");
@@ -78,12 +78,12 @@ class WhatsappClient {
 		this.client.initialize();
 	}
 	
-	async sendDataByChunks(chatId, data_base64, mimetype, msg_react = (emoji) => {}, CHUNK_SIZE = 512 * 1024,) {
+	async sendDataByChunks(msg, data_base64, mimetype, CHUNK_SIZE = 512 * 1024,) {
 		return new Promise(async (resolve, reject) => {
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
 			
-			this.socket.emit("data-start", chatId, uuid, mimetype, data_base64.length,);
-			msg_react("👀")
+			this.socket.emit("data-start", msg.from, uuid, mimetype, data_base64.length,);
+			msg.react("👀")
 	
 			const sendChunk = async (chunk_index) => {
 			    const start = chunk_index * CHUNK_SIZE,
@@ -143,7 +143,7 @@ class WhatsappClient {
 			
 			this.socket.emit('data-end', uuid);
 			console.log("All data sent");
-			msg_react("⏳");
+			msg.react("⏳");
 			return resolve(true);
 		});
 
@@ -157,7 +157,7 @@ class WhatsappClient {
 				messages.forEach(msg => {
 					if (msg.hasReaction) {
 						msg.getReactions().then(reactions => {
-							reactions.filter(reaction => reaction.emoji === "⏳" && reaction.hasReactionByMe)
+							reactions.filter(reaction => reaction.hasReactionByMe)
 								.forEach(() => msg.react("✅"));
 						})
 					}

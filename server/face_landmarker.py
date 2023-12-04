@@ -136,15 +136,14 @@ def landmark_image(filename):
 	cv2.imwrite('landmark.jpg', cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
 	cv2.imwrite('croped.jpg', cv2.cvtColor(croped_image, cv2.COLOR_RGB2BGR))
     
-
+device = torch.device(f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu")
 def infer(
-		gpu_idx= None,
 		detector= 'mediapipe',
 		data_filename= './ali.mp4', 
 		config_filename= 'server/vsr/configs/CMUMOSEAS_V_ES_WER44.5.ini', 
 		landmarks_filename= None, 
 	):
-	device = torch.device(f"cuda:{torch.cuda.current_device()}" if torch.cuda.is_available() else "cpu")
+	
 	output = InferencePipeline(config_filename, device=device, detector=detector, face_track=True)(data_filename, landmarks_filename)
 	print(f"hyp: {output}")
 	return output

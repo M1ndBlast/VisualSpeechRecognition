@@ -18,6 +18,7 @@ class WhatsappClient {
 			authStrategy: new LocalAuth(),
 			puppeteer: {
 				// headless: false,
+				args: ["--no-sandbox", "--disable-setuid-sandbox"],
 			}
 		});
 		this.client.on("qr", (qr) => {

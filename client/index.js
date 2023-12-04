@@ -8,7 +8,7 @@ import WhatsappClient from "./whatsapp.js";
 import Console from "./mConsole.js";
 const console = new Console("[socket client]");
 
-const socket = io("http://localhost:8080");
+const socket = io("http://localhost:8081");
 const whatsapp = new WhatsappClient(socket);
 
 

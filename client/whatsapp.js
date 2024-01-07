@@ -1,4 +1,4 @@
-// whatsapp.js (Recibe las comunicaciones del servidor y las envia a whatsapp-web.js para enviar y recibir videos)
+// /client/whatsapp.js (Recibe las comunicaciones del servidor y las envia a whatsapp-web.js para enviar y recibir videos)
 // Autor: Peduzzi Acevedo Gustavo Alain
 // Fecha: 2023-05-25
 
@@ -78,12 +78,14 @@ class WhatsappClient {
 		this.client.initialize();
 	}
 	
-	async sendDataByChunks(msg, data_base64, mimetype, CHUNK_SIZE = 512 * 1024,) {
+	async sendDataByChunks(msg, data_base64, mimetype, CHUNK_SIZE = 512 * 1024,) { // 512 KB
 		return new Promise(async (resolve, reject) => {
+			// Generar un uuid para identificar el archivo
 			const uuid = crypto.createHash('md5').update(data_base64).digest('hex').substring(0, 16);
 			
+			// Enviar el archivo al servidor
 			this.socket.emit("data-start", msg.from, uuid, mimetype, data_base64.length,);
-			msg.react("👀")
+			msg.react("👀")	// Confirmar que se recibió el mensaje
 	
 			const sendChunk = async (chunk_index) => {
 			    const start = chunk_index * CHUNK_SIZE,
@@ -114,6 +116,7 @@ class WhatsappClient {
 			    });
 			};
 	
+			// Enviar los chunks
 			for (let i = 0, current_chunk_index = 0; 
 				 i < data_base64.length; 
 				 i += CHUNK_SIZE
@@ -141,9 +144,10 @@ class WhatsappClient {
 			    current_chunk_index++;
 			}
 			
+			// Enviar mensaje de finalización
 			this.socket.emit('data-end', uuid);
 			console.log("All data sent");
-			msg.react("⏳");
+			msg.react("⏳"); // Confirmar que se envió el archivo
 			return resolve(true);
 		});
 

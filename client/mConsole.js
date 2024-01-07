@@ -1,3 +1,4 @@
+// /client/mConsole.js
 import { Console } from "console";
 
 class mConsole extends Console {

@@ -1,4 +1,4 @@
-// index.js (Comunicacion con el servidor mediante socket.io y uso de myWhatsapp.js con whatsapp-web.js para recibir y enviar videos)
+// /client/index.js (Comunicacion con el servidor mediante socket.io y uso de myWhatsapp.js con whatsapp-web.js para recibir y enviar videos)
 // Autor: Peduzzi Acevedo Gustavo Alain
 // Fecha: 2023-05-25
 // Descripcion: Archivo principal del cliente, se encarga de la comunicacion con el servidor mediante socket.io y el uso de nuestro archivo myWhatsapp.js con la biblioteca whatsapp-web.js para recibir y enviar videos
